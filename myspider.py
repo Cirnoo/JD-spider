@@ -1,33 +1,33 @@
+#coding=utf-8
 import requests
 import time
 import csv
 from bs4 import BeautifulSoup
 from collections import OrderedDict
 import re
+import json
 class spider:
     def __init__(self):  
         name = '%E4%B8%89%E6%98%9F%E6%89%8B%E6%9C%BA'
-        self.search_url='https://search.jd.com/Search?keyword='+name+'&enc=utf-8&page={0}'
-        self.new_url='https://search.jd.com/s_new.php?keyword='+name+'&enc=utf-8&qrst=1&rt=1&stop=1&vt=2&wq='+name+'&cid3=655&page={0}&s={1}&scrolling=y&log_id={2}'
+        self.search_url='https://list.jd.com/list.html?cat=9987,653,655&ev=exbrand_15127&page={0}&sort=sort_rank_asc&trans=1&JL=6_0_0#J_main'
         self.url=self.search_url
         self.head = {'authority': 'search.jd.com',
                 'method': 'GET',
-                'path': '/s_new.php?keyword='+name+'&enc=utf-8&qrst=1&rt=1&stop=1&vt=2&wq='+name+'&cid2=653&cid3=655&page=4&s=84&scrolling=y&log_id=1529828108.22071&tpl=3_M&show_items=7651927,7367120,7056868,7419252,6001239,5934182,4554969,3893501,7421462,6577495,26480543553,7345757,4483120,6176077,6932795,7336429,5963066,5283387,25722468892,7425622,4768461',
+                'path': '/s_new.php?keyword=%E4%B8%89%E6%98%9F%E6%89%8B%E6%9C%BA&enc=utf-8&qrst=1&rt=1&stop=1&vt=2&bs=1&ev=exbrand_%E4%B8%89%E6%98%9F%EF%BC%88SAMSUNG%EF%BC%89%5E&page=8&s=172&scrolling=y',
                 'scheme': 'https',
-                'referer': 'https://search.jd.com/Search?keyword='+name+'&enc=utf-8&qrst=1&rt=1&stop=1&vt=2&wq='+name+'&cid3=655&page=3&s=58&click=0',
+                'referer': 'https://search.jd.com/Search?keyword=%E4%B8%89%E6%98%9F%E6%89%8B%E6%9C%BA&enc=utf-8&qrst=1&rt=1&stop=1&vt=2&bs=1&ev=exbrand_%E4%B8%89%E6%98%9F%EF%BC%88SAMSUNG%EF%BC%89%5E&page=7&s=133&click=0',
                 'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36',
                 'x-requested-with': 'XMLHttpRequest',
-                #'Cookie':'qrsc=3; pinId=RAGa4xMoVrs; xtest=1210.cf6b6759; ipLocation=%u5E7F%u4E1C; _jrda=5; TrackID=1aUdbc9HHS2MdEzabuYEyED1iDJaLWwBAfGBfyIHJZCLWKfWaB_KHKIMX9Vj9_2wUakxuSLAO9AFtB2U0SsAD-mXIh5rIfuDiSHSNhZcsJvg; shshshfpa=17943c91-d534-104f-a035-6e1719740bb6-1525571955; shshshfpb=2f200f7c5265e4af999b95b20d90e6618559f7251020a80ea1aee61500; cn=0; 3AB9D23F7A4B3C9B=QFOFIDQSIC7TZDQ7U4RPNYNFQN7S26SFCQQGTC3YU5UZQJZUBNPEXMX7O3R7SIRBTTJ72AXC4S3IJ46ESBLTNHD37U; ipLoc-djd=19-1607-3638-3638.608841570; __jdu=930036140; user-key=31a7628c-a9b2-44b0-8147-f10a9e597d6f; areaId=19; __jdv=122270672|direct|-|none|-|1529893590075; PCSYCityID=25; mt_xid=V2_52007VwsQU1xaVVoaSClUA2YLEAdbWk5YSk9MQAA0BBZOVQ0ADwNLGlUAZwQXVQpaAlkvShhcDHsCFU5eXENaGkIZWg5nAyJQbVhiWR9BGlUNZwoWYl1dVF0%3D; __jdc=122270672; shshshfp=72ec41b59960ea9a26956307465948f6; rkv=V0700; __jda=122270672.930036140.-.1529979524.1529984840.85; __jdb=122270672.1.930036140|85.1529984840; shshshsID=f797fbad20f4e576e9c30d1c381ecbb1_1_1529984840145'
             }
+        self.goods_url='https://item.jd.com/{0}.html'
         self.goods_tab=OrderedDict()
-        for i in range(1,5):
+        for i in range(1,2):
             print("page "+str(i)+'....')
-            #self.get_first_page(i)
-            self.get_second_page(i)
+            self.get_per_page(i)
             print("***********")
         self.output()
     def output(self):
-        with open('JD_Phone.csv','a',newline='',encoding='gbk')as f:
+        with open('JD_Phone.csv','a',newline='',encoding='gb18030')as f:
             write=csv.writer(f)
             for obj in self.goods_tab.values():
                 obj.output(write)
@@ -37,52 +37,107 @@ class spider:
         html = web.text
         soup = BeautifulSoup(html,'lxml')
         lis = soup.find_all("li",class_="gl-item")
+        id_str=""
+        id_list=[]
         for li in lis:
-            id=int(li.get("data-pid"))
+            str_t=li.div.get("data-sku")
+            id=int(str_t)
             if id not in self.goods_tab.keys():
                 self.goods_tab[id]=goods_info(li)
+                id_str=id_str+str_t+','
+                id_list.append(id)
             else:
                 print("the same goods")
-           
-    def get_first_page(self,page):
+        self.set_price(id_str)
+        self.set_goods_param(id_list)
+    def set_goods_param(self,id_arr):
+        for id in id_arr:
+            url=self.goods_url.format(id)
+            html=requests.get(url).text
+            soup=BeautifulSoup(html,'lxml')
+            self.goods_tab[id].set_param(soup)
+    def set_price(self,id_str):
+        json_url='https://p.3.cn/prices/mgets?skuIds='+id_str
+        r = requests.get(json_url).text
+        data = json.loads(r)
+        for p in data:
+            id=int(p['id'][2:])
+            price=float(p['p'])
+            self.goods_tab[id].price=price
+    def get_per_page(self,page):
         print("get the first 30...")
-        url=self.search_url.format(page*2-1)
+        url=self.search_url.format(page)
         self.get_goods_info(url)
     def get_second_page(self,page):
         print("get the later 30...")
         a=time.time()
         b='%.5f'%a
         n=page
-        url=self.new_url.format(n,30*(n-1),b)
+        url=self.new_url.format(n,31*int(n/2),b)
         self.get_goods_info(url)
-
-
 class goods_info:
     def __init__(self,info):
         self.info=info
-        self.name=self.get_name()
-        self.url=self.get_url()
-        self.price=self.get_price()
+        self.id=self.get_id()
+        self.name=None
+        self.price=None
         self.ram=0
         self.battery=0
-        self.color=self.get_color()
-        #self.id=self.get_id()
+        self.color=[]
+        self.battery=None
+        self.camera_front=None
+        self.camera_back=None
     def get_name(self):
-        return self.info.find("div",class_="p-name p-name-type-2").em.get_text()
-    def get_url(self):
-        return self.info.a.get("href")
+        name=self.info.find("div",class_="p-name").em
+        [s.extract() for s in name('span')]
+        return ''.join(name.get_text().strip())
     def get_id(self):
-        return self.info.get("data-pid")
-    def get_color(self):
-        all_color=self.info.find_all("li",class_="ps-item")
-        color=[]
-        for c in all_color:
-            color.append(c.a.get("title"))
-        return color
-    def get_price(self):
-        return self.info.strong.get_text()
+        return int(self.info.div.get("data-sku"))
+    def set_color(self,soup):
+        t=soup.find('script').get_text()
+        pos1=t.find('colorSize: [')
+        if pos1==-1:
+            return
+        pos2=t[pos1:].find(']')
+        begin=pos1+len('colorSize: [')
+        end=pos1+pos2
+        temp=t[begin:end]
+        js=eval(temp)
+        for c in js:
+            self.color.append(c['颜色'])
+    def set_name(self,soup):
+        self.name=soup.find('div',class_="item ellipsis").get('title')
+    def set_battery(self,soup):
+        text=soup.find(text='电池容量（mAh）').next.get_text()
+        self.battery=text+'mah'
+    def set_param(self,soup):
+        
+        self.set_color(soup)
+        self.set_name
+        soup=soup.find('div',class_="detail")
+        self.set_battery(soup)
+        self.set_camera_frot(soup)
+        self.set_camera_back(soup)
+        self.set_ram(soup)
+    def set_camera_frot(self,soup):
+        label=None
+        try:
+            label=soup.find('dt',text='前置摄像头').next.next
+        except:
+            label=soup.find('td',text='前置摄像头').next.next
+        self.camera_front=label.get_text
+    def set_camera_back(self,soup):
+        label=None
+        try:
+            label=soup.find('dt',text='后置摄像头').next.next
+        except:
+            label=soup.find('td',text='后置摄像头').next.next
+        self.camera_front=label.get_text
+    def set_ram(self,soup):
+        label=soup.find(text='机型的运行内存，决定机身的运行速度。').parent.find_next()
+        self.ram=label.get_text
     def output(self,writer):
-        writer.writerow([self.name,self.price,",".join(self.color),self.url])
+        writer.writerow([self.name,self.price,",".join(self.color)])
 
 if __name__=='__main__':
     with open('JD_Phone.csv','w+',newline='',encoding='gbk')as f:
