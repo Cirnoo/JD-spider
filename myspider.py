@@ -24,7 +24,7 @@ class spider:
         self.pool=threadpool.ThreadPool(20) 
         self.goods_url='https://item.jd.com/{0}.html'
         self.goods_tab=OrderedDict()
-        for i in range(4,5):
+        for i in range(1,7):    #一共6页
             print("page "+str(i)+'....')
             self.get_per_page(i)
             print("******page {0} ok*****".format(i))
@@ -32,7 +32,7 @@ class spider:
         self.output()
     
     def output(self):
-        with open('JD_Phone.csv','a',newline='',encoding='gb18030')as f:
+        with open('Samsung _Phone.csv','a',newline='',encoding='gb18030')as f:
             write=csv.writer(f)
             for obj in self.goods_tab.values():
                 obj.output(write)
@@ -43,6 +43,7 @@ class spider:
             i=len(self.pool._requests_queue.queue)
             print('Waiting for worker threads...curent tasks {0}/20 '.format(i)) 
             time.sleep(0.8)
+        self.pool.wait()
 
     """ def set_goods_param(self,id_arr):
         #单线程函数   
@@ -71,6 +72,8 @@ class spider:
         for p in data:
             id=int(p['id'][2:])
             price=float(p['p'])
+            if price<0:
+                price='停售'
             self.goods_tab[id].price=price
 
     def get_per_page(self,page):
@@ -133,18 +136,24 @@ class goods_info:
                 self.color.append(t.get_text())
         except : #无法获取颜色
             print('get color failure id={0}'.format(self.id))
+            self.color.append('其他')
     def set_name(self,soup):
         try:
             # 提取名字方案一
-            self.name=soup.find('div',class_="item ellipsis").get('title')
+            label=soup.find('div',class_="item ellipsis")
+            if label!=None:
+                self.name=label.get('title')
+            else: # 方案二
+                t=soup.find('div',class_='detail')
+                self.name=t.find('div',class_="p-name").get_text()
+            self.name=self.name.replace('三星（SAMSUNG） ','')
         except:
-            # 方案二
-            self.name=soup.find('div',class_="p-name").get_text()
+            print('set name error id={0}'.format(self.id))
     def set_battery(self,soup):
         try:
             text=soup.find(text='电池容量（mAh）')
             if text!=None:
-                self.battery=text+'mah'
+                self.battery=text.next.get_text()
             else:
                 self.battery=re.search('\d+mAh',soup.get_text(),re.IGNORECASE).group(0)
         except :
@@ -164,37 +173,44 @@ class goods_info:
             if label==None:
                 label=soup.find('td',text='前置摄像头')
             if label==None: #奇葩商品页适用
-                self.camera_front=re.search('前置摄像头\D*(\d+.+)\n',soup.get_text())
+                self.camera_front=re.search('前置摄像头\D*：(\d+.{0,10})\\n',soup.get_text()).group(1)
             else:
                 self.camera_front=label.find_next().get_text()  
         except:
             print('set_camera_frot error id={0}'.format(self.id))
+            self.camera_front='无'
     def set_camera_back(self,soup):
         try:
             label=soup.find('dt',text='后置摄像头')
             if label==None:
                 label=soup.find('td',text='后置摄像头')
             if label==None: #奇葩商品页适用
-                self.camera_back=re.search('后置摄像头\D*(\d+.+)\n',soup.get_text())
+                self.camera_back=re.search('后置摄像头\D*：(\D*\d+.{0,10})\\n',soup.get_text()).group(1)
             else:
                 self.camera_back=label.find_next().get_text()  
         except:
             print('set_camera_back error id={0}'.format(self.id))
+            self.camera_back='无'
     def set_ram(self,soup):
         try:
             label=soup.find(text='机型的运行内存，决定机身的运行速度。')    #方案一
             if label!=None:
                 self.ram=label.parent.find_next().get_text()
-            else:   #方案二
-                self.ram=re.search('\d+GB',soup.get_text()).group(0)
-        except:
+            if self.ram=='其他' or label==None:   #方案一失败
+                test=None
+                test=re.search('\dG{0,1}B{0,1}(\+\d*GB{0,1})',soup.get_text(),re.IGNORECASE)
+                if test==None:
+                    test=re.search('(\d+G)RAM',soup.get_text(),re.IGNORECASE)
+                if test!=None:
+                    self.ram=test.group(1)
+        except NameError as e:
             print("get ram failure id={0}".format(self.id))
-        
+            
     def output(self,writer):
         writer.writerow([self.name,self.price,str(",".join(self.color)),self.ram,self.battery,self.camera_front,self.camera_back])
 
 if __name__=='__main__':
-    with open('JD_Phone.csv','w+',newline='',encoding='gbk')as f:
+    with open('Samsung _Phone.csv','w+',newline='',encoding='gbk')as f:
         f.truncate()
         write=csv.writer(f)
         write.writerow(['型号','价格','颜色','RAM','电池容量','前置摄像头','后置摄像头'])
